@@ -76,7 +76,7 @@ class Compiler
 		@global_variables = Hash.new
 		@local_variables  = Hash.new
 
-		@func_names       = Array.new
+		@func_names       = Hash.new
 		@func_programs    = Hash.new
 		@func_arguments   = Hash.new
 		@current_func_name = nil
