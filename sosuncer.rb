@@ -5,18 +5,25 @@
 #制約
 #原則、ブロック外ではグローバル変数の宣言しかできない
 #String型のスカラー値を条件に使うことはゆるされない
+#拡張子を間違えることは許されざる行為。
 
 #注意
-#if, whileなどのブロックを持つ文が、returnに対応していないため、
-#関数内でこれらを用いた時にreturnされない不具合(再帰できてないのはこれのせいかも)
-
-#ネストして行った時に、変数のスコープの問題が発生(Array#clearしているので、関係無いlocalスコープから他のlocalスコープへの干渉が起きる)
+#いくつかネストする際、変数のスコープの問題が発生(Array#clearしているので、関係無いlocalスコープから他のlocalスコープへの干渉が起きる。おそらく、ネスト前のスコープの変数が消滅するという現象が起こる)
 
 ###時間が無い中、実現できて欲しかった範囲でできないこと
+##Fatal
 #ローカル変数が、正しいスコープで機能できていない
 #関数のネスト呼び出しについて、実装しきれていない(再帰もキツイ)
+##Bad
 #フォーマット文字列を使えない
-#標準入力がない
+#配列がない
+#文字列に添え字アクセスできない
+#文字列の掛け算ができない
+#文字列のスライスができない
+#辞書型がない
+#OOP出来ない
+#他ライブラリのimportができない
+#変数宣言にいちいちglobalとかlocalとかつけなきゃいけない(プログラマに、ブロック外ではglobal宣言を強いている)
 
 class RenchonException < Exception; end
 class Compiler
@@ -69,7 +76,7 @@ class Compiler
 	def initialize()
 		@@code = File.open(ARGV[0], "r").read()
 		e = File.extname(ARGV[0]) 
-		unless e =~ /\A\.renchon(saikou|.*suki|kami)\z/
+		unless e =~ /\A\.renchon(:?saikou|.*suki|kami)\z/
 			raise RenchonException, "こんぱいるしたくないのん..."
 		end
 		@global_variables = Hash.new
@@ -139,11 +146,7 @@ class Compiler
 		elsif @@code =~ /\A\s*(true|false)/
 			@@code = $'
 			debug "[Eat@true_or_false] #{$1}"
-			if $1 == "true"
-				return true
-			else
-				return false
-			end
+			return eval($1)
 		#Variable name
 		elsif @@code =~ /\A\s*([a-zA-Z][a-zA-Z0-9_]*)/
 			@@code = $'
@@ -583,6 +586,14 @@ class Compiler
 		return [:substitution, val1, operator, val2]
 	end
 
+	#複雑な条件(こいつを、今までのconditionと置き換えてやればいい)
+	#complex_condition := '!'? condition (('||'|'&&'|'^') '!'? condition)*
+	#括弧も考慮する必要が有る。そのあたりはfactor()を参考にすると良さげ？
+	#[:or, condition1, [:and, condition2, condition3]]
+	def complex_condition()
+
+	end
+
 	#条件
 	def condition()
 		debug "[condition] in"
@@ -775,7 +786,11 @@ class Compiler
 				if myEval(program[1])
 					prog = program[2]
 					prog.each{|p|
-						myEval(p)
+						ret = myEval(p)
+						if ret != nil && ret.is_a?(Array) && ret[0] == :return
+							@local_variables.clear
+							return ret
+						end
 					}
 				else
 					unless program[3] == nil #もし、elifもしくはelseが続くなら
@@ -786,14 +801,22 @@ class Compiler
 			when :else
 				prog = program[1]
 				prog.each{|p|
-					myEval(p)
+					ret = myEval(p)
+					if ret != nil && ret.is_a?(Array) && ret[0] == :return
+						@local_variables.clear
+						return ret
+					end
 				}
 				@local_variables.clear
 			when :while
 				prog = program[2]
 				while(myEval(program[1]))
 					prog.each{|p|
-						myEval(p)
+						ret = myEval(p)
+						if ret != nil && ret.is_a?(Array) && ret[0] == :return
+							@local_variables.clear
+							return ret
+						end
 					}
 				end
 			when :def
