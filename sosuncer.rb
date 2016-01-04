@@ -31,6 +31,7 @@ class Compiler
 		'else' => :else,
 		'while' => :while,
 		'print' => :print,
+		'read' => :read,
 		'def' => :def,
 		'return' => :return,
 		#signs
@@ -197,7 +198,7 @@ class Compiler
 		result = nil #resultをここで初期化しておく
 
 		#各sentenceをチェックしていく
-		unless (result=def_sentence()) || (result=call_sentence()) || (result=return_sentence()) || (result=print_sentence()) || (result=declare_sentence()) || (result=if_sentence()) || (result=while_sentence()) ||  (result=substitution())
+		unless (result=def_sentence()) || (result=call_sentence()) || (result=return_sentence()) || (result=print_sentence()) || (result=read_sentence()) || (result=declare_sentence()) || (result=if_sentence()) || (result=while_sentence()) ||  (result=substitution())
 			debug "Invalid sentence"
 		end
 		debug "[+]#{result}"
@@ -246,6 +247,20 @@ class Compiler
 		debug "[print] get scalar #{exp}"
 		result = [:print, exp]
 		return result
+	end
+
+	def read_sentence()
+		debug "[read] in"
+		token = get_token()
+		unless token == :read
+			debug "[read] Oops"
+			unget_token(token)
+			return nil
+		end
+		debug "[read] get token #{token}"
+		variable = scalar()
+		debug "[read] get scalar #{variable}"
+		return [:read, variable]
 	end
 
 	def if_sentence()
@@ -713,6 +728,22 @@ class Compiler
 			when :print
 				#debug "[print] Exec with arg #{program[1]}"
 				puts myEval(program[1])
+			when :read
+				val = STDIN.gets.chomp!
+				if val =~ /\A\d+\z/ #数値
+					val = val.to_i
+				elsif val =~ /\A(true|false)\z/ #真偽値
+					val = eval(val)
+				end #数値でも真偽値でもなければ、文字列だと考える。
+				where = where_exist(program[1][1])
+				if where == "local"
+					@local_variables[program[1][1]] = val
+				elsif where == "func"
+					debug "func substitution #{[[:func_name, @func_name],[:func_arg_name, program[1][1]]]}"
+					@func_arguments[[[:func_name, @func_name], [:func_arg_name, program[1][1]]]] = val
+				elsif where == "global"
+					@global_variables[program[1][1]] = val
+				end
 			when :variable
 				return(getVariable(program[1], where=where_exist(program[1])))
 			when :condition
