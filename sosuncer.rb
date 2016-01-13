@@ -595,6 +595,8 @@ class Compiler
 	end
 
 	#条件
+	#演算と似た感じで、２層構造にすべきかも
+	#condition := cond_factor (('and'|'or')  cond_factor)
 	def condition()
 		debug "[condition] in"
 		op1 = get_token()
