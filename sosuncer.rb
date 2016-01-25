@@ -99,7 +99,7 @@ class Compiler
 		end
 	end
 
-	#******************** Token ********************
+	#******************** 字句解析 ********************
 	def get_token()
 		#debug "func_names = #{@func_names.join('|')}"
 		debug "Excess code = #{@@code}"
@@ -176,7 +176,7 @@ class Compiler
 		end
 	end
 
-	#******************** 字句解析 ********************
+	#******************** 構文解析 ********************
 
 	###Foundation
 	def program()
@@ -689,7 +689,7 @@ class Compiler
 		return nil #tokenはnilではないが、scalarではない
 	end
 
-	#******************** 構文解析 ********************
+	#******************** Evaluate ********************
 	###Helper
 	#Global or Local
 	def where_exist(variable)
